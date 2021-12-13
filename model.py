@@ -91,12 +91,7 @@ class VAE(nn.Module):
         else:
             self.embedding_dim = embed_dim
         # use embedding wrapper to encode the input characters
-        # self.embedding_wrapper = Embedding(self.vocab_size, self.embedding_dim)
         self.embedding_wrapper = nn.Embedding(self.vocab_size, self.embedding_dim)
-        # embedding_wrapper for transformers ... need a much larger embedding dim
-        self.embedding_wrapper_transformers = nn.Embedding(
-            self.vocab_size, self.hidden_dim
-        )
 
         ## rnn model
         if self.rnn_type == "RNN":
@@ -443,16 +438,9 @@ class VAE(nn.Module):
 
         ## reconstruction loss
         train_probabilities = self.decode(input_seq, z, sigma)
-        # result = torch.argmax(train_probabilities, dim=-1)
-        # print('the decoded result')
-        # print(result)
-        # print(train_probabilities)
         log_likelihood = torch.log(train_probabilities).permute(0, 2, 1)
         NLL_loss_fn = nn.NLLLoss()
-        # print(log_likelihood)
-        # print(input_seq)
         nll_loss = NLL_loss_fn(log_likelihood, input_seq)
-        # print("this is the nll loss:{}".format(nll_loss))
 
         ## KL loss
         if self.experiment_type == "general":
@@ -507,14 +495,7 @@ class VAE(nn.Module):
         pred_outcome = self.outcome_prediction(z, use_sigmoid).squeeze()  # .squeeze(1)
         # gold_outcome = gold_outcome
         mse_loss_fn = nn.MSELoss()
-        # print("this is the pred outcome")
-        # print(pred_outcome)
-        # print("this is the gold outcome")
-        # print(gold_outcome)
         mse_loss = mse_loss_fn(pred_outcome, gold_outcome)
-        # print("this is the pred outcome:{}".format(pred_outcome))
-        # print("this is the gold outcome:{}".format(gold_outcome))
-        # print("this is the mse loss:{}".format(mse_loss))
 
         outcome_var = self.compute_variance(gold_outcome)
         if outcome_var == 0:
@@ -806,21 +787,6 @@ if __name__ == "__main__":
     ).cuda()
     VAE_model.load_state_dict(checkpoint)
 
-    """
-    for t in test_loader:
-        input_seq = t[0].cuda()
-        gold_outcome = t[1].tolist()
-        z, sigma = VAE_model.encode(input_seq)
-        score = VAE_model.outcome_prediction(z, use_sigmoid)
-        reconstructed_seq = VAE_model.predict(z)[0]
-        for s in range(input_seq.size(0)):
-            print(input_seq[s])
-            print(reconstructed_seq[s].int())
-            print("******")
-            # print(gold_outcome)
-            # print(score)
-    """
-
     use_sigmoid = True
     log_alpha = -10000
 
@@ -872,10 +838,7 @@ if __name__ == "__main__":
             average_correct_modification.append(correct_modifications)
             average_improvement.append(outcome_improvements)
             average_seq_prob.append(sequence_probs)
-
-        # print(new_decode[0].int())
-        # print(new_outcome)
-        # print("*********")
+            
     average_edit_distance = [
         np.mean([x[i] for x in average_edit_distance])
         for i in range(len(average_edit_distance[0]))
@@ -912,7 +875,7 @@ if __name__ == "__main__":
     print("this is average sequence probability")
     print(average_seq_prob)
 
-    """
+    
     logger.log(
         "average improvement per sentence is {}".format(np.mean(avererage_improvement))
     )
@@ -928,122 +891,4 @@ if __name__ == "__main__":
     logger.log(
         "average correctness is {}".format(correct_modification / all_modification)
     )
-    """
-
-    """
-    (
-        modified_sequence,
-        outcome_improvement,
-        edit_distance,
-    ) = VAE_model.constrained_gradient_optimization(input_seq, log_alpha, use_sigmoid)
-
-    # = VAE_model.fixed_gradient_optimization(
-    #    input_seq, use_sigmoid, lr=0.05, optimization_step=1000
-    # )
-
-    # VAE_model.constrained_gradient_optimization(input_seq, log_alpha, use_sigmoid)
-    print(modified_sequence)
-    print(outcome_improvement)
-    print(edit_distance)
-
-
-    VAE_model = VAE(
-        vocab,
-        rnn_type,
-        pred_type,
-        embed_dim,
-        memory_dim,
-        latent_dim,
-        score_controller_dim,
-        max_seq_length,
-        experiment_type,
-    ).cuda()
-    optimizer = torch.optim.AdamW(VAE_model.parameters(), lr=0.001)
-    # optimizer = torch.optim.SGD(VAE_model.parameters(), lr=0.001, momentum=0.9)
-
-    num_training_steps = n_train * 100 / 2
-    scheduler = transformers.get_cosine_schedule_with_warmup(
-        optimizer, 0.3 * num_training_steps, num_training_steps
-    )
-
-    loss_val = 0
-    step = 0
-    VAE_model.zero_grad()
-    for epoch in range(100):
-        for t in train_loader:
-            input_seq = t[0].cuda()
-            gold_outcome = t[1].cuda()
-            loss = VAE_model.compute_loss(
-                input_seq,
-                gold_outcome,
-                use_sigmoid,
-                seq2seq_importance,
-                mse_importance,
-                kl_importance,
-                invar_importance,
-            )
-            loss.backward()
-            optimizer.step()
-            VAE_model.zero_grad()
-            # scheduler.step()
-            step += 1
-            loss_val += loss.item()
-            if step % 1000 == 0:
-                print(loss_val / 1000)
-                loss_val = 0
-
-    z, sigma = VAE_model.encode(input_seq)
-    out = VAE_model.predict(z)
-    print("this is the final prediction")
-    print(out)
-    score = VAE_model.outcome_prediction(z, True)
-    print(score)
-
-    VAE_model = VAE(
-        vocab,
-        rnn_type,
-        pred_type,
-        embed_dim,
-        memory_dim,
-        latent_dim,
-        score_controller_dim,
-        max_seq_length,
-        experiment_type,
-    ).cuda()
-    optimizer = torch.optim.AdamW(VAE_model.parameters(), lr=0.001)
-    # optimizer = torch.optim.SGD(VAE_model.parameters(), lr=0.001, momentum=0.9)
-
-    loss_val = 0
-    step = 0
-    VAE_model.zero_grad()
-    for epoch in range(100):
-        for t in train_loader:
-            input_seq = t[0].cuda()
-            gold_outcome = t[1].cuda()
-            loss = VAE_model.compute_loss(
-                input_seq,
-                gold_outcome,
-                use_sigmoid,
-                seq2seq_importance,
-                mse_importance,
-                kl_importance,
-                invar_importance,
-            )
-            loss.backward()
-            optimizer.step()
-            VAE_model.zero_grad()
-            # scheduler.step()
-            step += 1
-            loss_val += loss.item()
-            if step % 10 == 0:
-                print(loss_val)
-                loss_val = 0
-
-
-    z, sigma = VAE_model.encode(input_seq)
-    out = VAE_model.predict(z)
-    print("this is the final prediction")
-    print(out)
-    score = VAE_model.outcome_prediction(z, True)
-    print(score)
-    """
+    
