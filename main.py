@@ -2,7 +2,7 @@ import torch
 from simulation_dataset import compute_simulation_dataloader
 import argparse
 import torch
-from VAE import VAE, kl_anneal_function
+from model import VAE, kl_anneal_function
 import os
 import sys
 import numpy as np
