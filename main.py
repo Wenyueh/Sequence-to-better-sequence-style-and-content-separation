@@ -251,7 +251,6 @@ if __name__ == "__main__":
                     args.data_style, args.experiment_type
                 ),
             )
-    """
 
     # train prior using logistic kl_importance
     VAE_model = load_model(
@@ -349,4 +348,3 @@ if __name__ == "__main__":
                         )
                         best_loss = loss_val
                     loss_val = 0
-    """
