@@ -6,7 +6,7 @@ The project thus tries to improve the model by separating “style” and “con
 
 -- main.py: training file
 
--- model.py: VAE model and outcome-predictor
+-- model.py: pytorch implementation of VAE model and outcome-predictor
 
 -- simulation_dataset.py: generate three synthetic simulation datasets
 
